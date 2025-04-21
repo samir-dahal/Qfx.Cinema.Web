@@ -1,0 +1,43 @@
+﻿<tr>
+    <td>
+        <img src="@Poster"
+        alt="@Title"
+        class="img-fluid rounded"
+        style="width: 80px; height: 120px; object-fit: cover;"
+        onerror="this.src='https://placehold.co/150x250?text=No%20image'">
+    </td>
+    <td>
+        <div class="fw-bold">@Title</div>
+        <small class="text-muted d-block text-uppercase">@Language</small>
+        <small class="text-muted d-block">@ReleaseDate.ToLongDateString()</small>
+        @if (!string.IsNullOrWhiteSpace(DaysLeft))
+        {
+            <small class="text-muted d-block">@DaysLeft</small>
+        }
+        @if (IsReleased)
+        {
+            <span class="badge bg-success">Released</span>
+        }
+        else
+        {
+            <span class="badge bg-secondary">Not Released</span>
+        }
+    </td>
+</tr>
+@code {
+    [Parameter] public string Poster { get; set; } = null!;
+    [Parameter] public string Title { get; set; } = null!;
+    [Parameter] public DateTime ReleaseDate { get; set; }
+    [Parameter] public string Language { get; set; } = null!;
+    public bool IsReleased => DateTime.Now.Date >= ReleaseDate.Date;
+    public string DaysLeft
+    {
+        get
+        {
+            int daysLeft = (int)(ReleaseDate.Date - DateTime.Now.Date).TotalDays;
+            if (daysLeft <= 0)
+                return string.Empty;
+            return $"{daysLeft} {(daysLeft > 1 ? "days" : "day")} left";
+        }
+    }
+}

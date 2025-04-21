@@ -1,0 +1,196 @@
+﻿@page "/"
+@inject IApiService Api
+<PageTitle>Home</PageTitle>
+<div id="exception">@exception</div>
+@if (isBusy)
+{
+    <p><em>Loading...</em></p>
+}
+<select class="form-control" @bind="@selectedCityId">
+    @if (cinemaCities is not null)
+    {
+        @foreach (var city in cinemaCities)
+        {
+            <option value="@city.Id">@city.Name</option>
+        }
+    }
+</select>
+<button @onclick="InitNowShowingAsync" class="btn btn-primary my-2">Show</button>
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th style="width: 100px">Poster</th>
+                <th>Title</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (upcomingMovies is not null)
+            {
+                @foreach (var movie in upcomingMovies)
+                {
+                    int daysLeft = (int)(movie.ReleaseDate.Date - DateTime.Now.Date).TotalDays;
+                    <tr>
+                        <td>
+                            <img src="@movie.Poster"
+                            alt="@movie.Title"
+                            class="img-fluid rounded"
+                            style="width: 80px; height: 120px; object-fit: cover;"
+                            onerror="this.src='https://placehold.co/150x250?text=No%20image'">
+                        </td>
+                        <td>
+                            <div class="fw-bold">@movie.Title</div>
+                            <small class="text-muted d-block text-uppercase">@movie.Language</small>
+                            <small class="text-muted d-block">@movie.ReleaseDate.ToLongDateString()</small>
+                            @if (daysLeft > 0)
+                            {
+                                <small class="text-muted d-block">@daysLeft @(daysLeft > 1 ? "days" : "day") left</small>
+                            }
+                            @if (DateTime.Now.Date >= movie.ReleaseDate.Date)
+                            {
+                                <span class="badge bg-success">Released</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Not Released</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+            @if (nowShowingMovies is not null)
+            {
+                @foreach (var movie in nowShowingMovies)
+                {
+                    int daysLeft = (int)(movie.ReleaseDate.Date - DateTime.Now.Date).TotalDays;
+                    <tr>
+                        <td>
+                            <img src="@movie.Poster"
+                            alt="@movie.Title"
+                            class="img-fluid rounded"
+                            style="width: 80px; height: 120px; object-fit: cover;"
+                            onerror="this.src='https://placehold.co/150x250?text=No%20image'">
+                        </td>
+                        <td>
+                            <div class="fw-bold">@movie.Title</div>
+                            <small class="text-muted d-block text-uppercase">@movie.Language</small>
+                            <small class="text-muted d-block">@movie.ReleaseDate.ToLongDateString()</small>
+                            @if (daysLeft > 0)
+                            {
+                                <small class="text-muted d-block">@daysLeft @(daysLeft > 1 ? "days" : "day") left</small>
+                            }
+                            @if (DateTime.Now.Date >= movie.ReleaseDate.Date)
+                            {
+                                <span class="badge bg-success">Released</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Not Released</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private MovieResponse[]? upcomingMovies;
+    private MovieResponse[]? nowShowingMovies;
+    private CinemaCityResponse[]? cinemaCities;
+    private int selectedCityId = 48366; //birtamode
+    private string? exception;
+    private bool isBusy;
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isBusy = true;
+            var tasks = new Task[]
+            {
+                InitUpcomingsAsync(),
+                InitCinemaCitiesAsync(),
+                InitNowShowingAsync(),
+            };
+            await Task.WhenAll(tasks);
+        }
+        catch (Exception ex)
+        {
+            exception = ex.ToString();
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+    private async Task InitCinemaCitiesAsync()
+    {
+        var data = await Api.Cinemas();
+        var res = data.DeserializeAnonymousType(new
+        {
+            Records = new[]
+            {
+                new
+                {
+                    city_name = string.Empty,
+                    city_id = 0,
+                }
+            }
+        });
+        cinemaCities = res?.Records
+        .DistinctBy(x => x.city_id)
+        .OrderBy(x => x.city_name)
+        .Select(x => new CinemaCityResponse(x.city_id, x.city_name))
+        .ToArray();
+
+    }
+    private async Task InitUpcomingsAsync()
+    {
+        var data = await Api.UpcomingShows();
+        var res = data.DeserializeAnonymousType(new
+        {
+            Records = new
+            {
+                data = new[]
+                {
+                    new
+                    {
+                        movie_title = string.Empty,
+                        original_release_date = DateTime.Now,
+                        languages_with_translations = new[]{ new { key = string.Empty } },
+                        languageSpecificImages = new[]{new {artwork = string.Empty }},
+                    }
+                }
+            }
+        });
+        upcomingMovies = res?.Records.data
+        .Where(x => x.languages_with_translations.Any(u => u.key == "English"))
+        .Select(x => new MovieResponse(x.movie_title, x.original_release_date, "English", x.languageSpecificImages.First().artwork))
+        .ToArray();
+    }
+    private async Task InitNowShowingAsync()
+    {
+        var data = await Api.NowShowing(selectedCityId);
+        var res = data.DeserializeAnonymousType(new
+        {
+            Records = new
+            {
+                data = new[]
+                {
+                    new
+                    {
+                        movie_title = string.Empty,
+                        original_release_date = DateTime.Now,
+                        languages_with_translations = new[]{ new { key = string.Empty } },
+                        languageSpecificImages = new[]{new {artwork = string.Empty }},
+                    }
+                }
+            }
+        });
+        nowShowingMovies = res?.Records.data
+        .Where(x => x.languages_with_translations.Any(u => u.key == "English"))
+        .Select(x => new MovieResponse(x.movie_title, x.original_release_date, "English", x.languageSpecificImages.First().artwork))
+        .ToArray();
+    }
+}
