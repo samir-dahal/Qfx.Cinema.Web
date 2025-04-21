@@ -1,0 +1,28 @@
+﻿<h3>@Title</h3>
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th style="width: 100px">Poster</th>
+                <th>Title</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Movies is not null)
+            {
+                @foreach (var movie in Movies)
+                {
+                    <Movie Id="@movie.Id"
+                           Poster="@movie.Poster"
+                           Title="@movie.Title"
+                           Language="@movie.Language"
+                           ReleaseDate="@movie.ReleaseDate" />
+                }
+            }
+        </tbody>
+    </table>
+</div>
+@code {
+    [Parameter] public string Title { get; set; } = null!;
+    [Parameter] public MovieResponse[]? Movies { get; set; }
+}

@@ -9,7 +9,7 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 #region Refit setup
-builder.Services.AddTransient<HttpResponseHandler>();
+//builder.Services.AddTransient<HttpResponseHandler>();
 builder.Services.AddRefitClient<IApiService>()
         .ConfigureHttpClient(client =>
         {

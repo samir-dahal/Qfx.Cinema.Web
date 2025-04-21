@@ -1,13 +1,15 @@
 ﻿<tr>
     <td>
-        <img src="@Poster"
-        alt="@Title"
-        class="img-fluid rounded"
-        style="width: 80px; height: 120px; object-fit: cover;"
-        onerror="this.src='https://placehold.co/150x250?text=No%20image'">
+        <a href="https://www.qfxcinemas.com/now-showing-booking/@Id/1/">
+            <img src="@Poster"
+                 alt="@Title"
+                 class="img-fluid rounded"
+                 style="width: 80px; height: 120px; object-fit: cover;"
+                 onerror="this.src='https://placehold.co/150x250?text=No%20image'">
+        </a>
     </td>
     <td>
-        <div class="fw-bold">@Title</div>
+        <div class="fw-bold" data-id="@Id">@Title</div>
         <small class="text-muted d-block text-uppercase">@Language</small>
         <small class="text-muted d-block">@ReleaseDate.ToLongDateString()</small>
         @if (!string.IsNullOrWhiteSpace(DaysLeft))
@@ -16,15 +18,16 @@
         }
         @if (IsReleased)
         {
-            <span class="badge bg-success">Released</span>
+            <span class="badge bg-success">Now Showing</span>
         }
         else
         {
-            <span class="badge bg-secondary">Not Released</span>
+            <span class="badge bg-secondary">Upcoming</span>
         }
     </td>
 </tr>
 @code {
+    [Parameter]public int Id { get; set; }
     [Parameter] public string Poster { get; set; } = null!;
     [Parameter] public string Title { get; set; } = null!;
     [Parameter] public DateTime ReleaseDate { get; set; }

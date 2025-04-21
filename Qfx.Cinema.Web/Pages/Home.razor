@@ -1,11 +1,18 @@
 ﻿@page "/"
 @inject IApiService Api
+@namespace Qfx.Cinema.Web.Components
+
 <PageTitle>Home</PageTitle>
-<div id="exception">@exception</div>
+@if (!string.IsNullOrWhiteSpace(exception))
+{
+    <div class="alert alert-danger" role="alert" id="exception">@exception</div>
+}
 @if (isBusy)
 {
     <p><em>Loading...</em></p>
 }
+<h3>Only Foregin Movies Collection!</h3>
+<span class="badge bg-secondary my-2">nearest theatre</span>
 <select class="form-control" @bind="@selectedCityId">
     @if (cinemaCities is not null)
     {
@@ -15,85 +22,9 @@
         }
     }
 </select>
-<button @onclick="InitNowShowingAsync" class="btn btn-primary my-2">Show</button>
-<div class="table-responsive">
-    <table class="table table-hover align-middle">
-        <thead class="table-light">
-            <tr>
-                <th style="width: 100px">Poster</th>
-                <th>Title</th>
-            </tr>
-        </thead>
-        <tbody>
-            @if (upcomingMovies is not null)
-            {
-                @foreach (var movie in upcomingMovies)
-                {
-                    int daysLeft = (int)(movie.ReleaseDate.Date - DateTime.Now.Date).TotalDays;
-                    <tr>
-                        <td>
-                            <img src="@movie.Poster"
-                            alt="@movie.Title"
-                            class="img-fluid rounded"
-                            style="width: 80px; height: 120px; object-fit: cover;"
-                            onerror="this.src='https://placehold.co/150x250?text=No%20image'">
-                        </td>
-                        <td>
-                            <div class="fw-bold">@movie.Title</div>
-                            <small class="text-muted d-block text-uppercase">@movie.Language</small>
-                            <small class="text-muted d-block">@movie.ReleaseDate.ToLongDateString()</small>
-                            @if (daysLeft > 0)
-                            {
-                                <small class="text-muted d-block">@daysLeft @(daysLeft > 1 ? "days" : "day") left</small>
-                            }
-                            @if (DateTime.Now.Date >= movie.ReleaseDate.Date)
-                            {
-                                <span class="badge bg-success">Released</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-secondary">Not Released</span>
-                            }
-                        </td>
-                    </tr>
-                }
-            }
-            @if (nowShowingMovies is not null)
-            {
-                @foreach (var movie in nowShowingMovies)
-                {
-                    int daysLeft = (int)(movie.ReleaseDate.Date - DateTime.Now.Date).TotalDays;
-                    <tr>
-                        <td>
-                            <img src="@movie.Poster"
-                            alt="@movie.Title"
-                            class="img-fluid rounded"
-                            style="width: 80px; height: 120px; object-fit: cover;"
-                            onerror="this.src='https://placehold.co/150x250?text=No%20image'">
-                        </td>
-                        <td>
-                            <div class="fw-bold">@movie.Title</div>
-                            <small class="text-muted d-block text-uppercase">@movie.Language</small>
-                            <small class="text-muted d-block">@movie.ReleaseDate.ToLongDateString()</small>
-                            @if (daysLeft > 0)
-                            {
-                                <small class="text-muted d-block">@daysLeft @(daysLeft > 1 ? "days" : "day") left</small>
-                            }
-                            @if (DateTime.Now.Date >= movie.ReleaseDate.Date)
-                            {
-                                <span class="badge bg-success">Released</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-secondary">Not Released</span>
-                            }
-                        </td>
-                    </tr>
-                }
-            }
-        </tbody>
-    </table>
-</div>
+<button @onclick="InitNowShowingAsync" class="btn btn-primary my-2" disabled="@isBusy">Show</button>
+<MovieList Title="Upcoming Movies" Movies="upcomingMovies" />
+<MovieList Title="Now Showing Movies" Movies="nowShowingMovies" />
 
 @code {
     private MovieResponse[]? upcomingMovies;
@@ -109,8 +40,8 @@
             isBusy = true;
             var tasks = new Task[]
             {
-                InitUpcomingsAsync(),
                 InitCinemaCitiesAsync(),
+                InitUpcomingsAsync(),
                 InitNowShowingAsync(),
             };
             await Task.WhenAll(tasks);
@@ -145,33 +76,21 @@
         .ToArray();
 
     }
-    private async Task InitUpcomingsAsync()
-    {
-        var data = await Api.UpcomingShows();
-        var res = data.DeserializeAnonymousType(new
-        {
-            Records = new
-            {
-                data = new[]
-                {
-                    new
-                    {
-                        movie_title = string.Empty,
-                        original_release_date = DateTime.Now,
-                        languages_with_translations = new[]{ new { key = string.Empty } },
-                        languageSpecificImages = new[]{new {artwork = string.Empty }},
-                    }
-                }
-            }
-        });
-        upcomingMovies = res?.Records.data
-        .Where(x => x.languages_with_translations.Any(u => u.key == "English"))
-        .Select(x => new MovieResponse(x.movie_title, x.original_release_date, "English", x.languageSpecificImages.First().artwork))
-        .ToArray();
-    }
+    private async Task InitUpcomingsAsync() => upcomingMovies = await FetchMoviesAsync(() => Api.UpcomingShows());
     private async Task InitNowShowingAsync()
     {
-        var data = await Api.NowShowing(selectedCityId);
+        try
+        {
+            nowShowingMovies = await FetchMoviesAsync(() => Api.NowShowing(selectedCityId));
+        }
+        catch (Exception ex)
+        {
+            exception = ex.ToString();
+        }
+    }
+    private async Task<MovieResponse[]> FetchMoviesAsync(Func<Task<string>> callback)
+    {
+        var data = await callback();
         var res = data.DeserializeAnonymousType(new
         {
             Records = new
@@ -180,6 +99,7 @@
                 {
                     new
                     {
+                        movie_id = 0,
                         movie_title = string.Empty,
                         original_release_date = DateTime.Now,
                         languages_with_translations = new[]{ new { key = string.Empty } },
@@ -188,9 +108,9 @@
                 }
             }
         });
-        nowShowingMovies = res?.Records.data
+        return res?.Records.data
         .Where(x => x.languages_with_translations.Any(u => u.key == "English"))
-        .Select(x => new MovieResponse(x.movie_title, x.original_release_date, "English", x.languageSpecificImages.First().artwork))
-        .ToArray();
+        .Select(x => new MovieResponse(x.movie_id, x.movie_title, x.original_release_date, "English", x.languageSpecificImages.First().artwork))
+        .ToArray() ?? [];
     }
 }
