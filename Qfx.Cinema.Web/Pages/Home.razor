@@ -11,7 +11,7 @@
 {
     <p><em>Loading...</em></p>
 }
-<h3>Only Foregin Movies Collection!</h3>
+<h3>Only Foreign Movies Collection!</h3>
 <span class="badge bg-secondary my-2">nearest theatre</span>
 <select class="form-control" @bind="@selectedCityId">
     @if (cinemaCities is not null)
@@ -23,8 +23,14 @@
     }
 </select>
 <button @onclick="InitNowShowingAsync" class="btn btn-primary my-2" disabled="@isBusy">Show</button>
-<MovieList Title="Upcoming Movies" Movies="upcomingMovies" />
-<MovieList Title="Now Showing Movies" Movies="nowShowingMovies" />
+<div class="row">
+    <div class="col-lg-6">
+        <MovieList Title="Now Showing" Movies="nowShowingMovies" />
+    </div>
+    <div class="col-lg-6">
+        <MovieList Title="Upcoming" Movies="upcomingMovies" />
+    </div>
+</div>
 
 @code {
     private MovieResponse[]? upcomingMovies;
