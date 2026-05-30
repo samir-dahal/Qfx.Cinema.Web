@@ -116,6 +116,7 @@
         });
         return res?.Records.data
         .Where(x => x.languages_with_translations.Any(u => u.key == "English"))
+        .OrderBy(x => x.original_release_date)
         .Select(x => new MovieResponse(x.movie_id, x.movie_title, x.original_release_date, "English", x.languageSpecificImages.First().artwork))
         .ToArray() ?? [];
     }
